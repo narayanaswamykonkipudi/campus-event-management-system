@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  /* Offset anchor scroll targets so the floating navbar doesn't cover the heading */
+  section[id] {
+    scroll-margin-top: 80px;
+  }
+}

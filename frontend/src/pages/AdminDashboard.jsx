@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {
+    PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 import EventModal from '../components/EventModal';
+
+const PIE_COLORS = ['#22c55e', '#ef4444'];
 
 const getEventStatus = (event) => {
     const endDate = event?.eventDate || event?.deadline;
@@ -21,7 +27,7 @@ const AdminDashboard = () => {
     const [metrics, setMetrics] = useState({ totalEvents: 0, totalRegistrations: 0, totalCapacity: 0, deptStats: {} });
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [error, setError] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'upcoming' | 'ended'
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const fetchData = async () => {
         const token = localStorage.getItem('token');
@@ -63,9 +69,20 @@ const AdminDashboard = () => {
     };
 
     const occupancyRate = metrics.totalCapacity > 0 ? ((metrics.totalRegistrations / metrics.totalCapacity) * 100).toFixed(1) : 0;
-
     const endedCount = events.filter(e => getEventStatus(e) === 'ended').length;
     const upcomingCount = events.length - endedCount;
+
+    // Data for charts
+    const pieData = [
+        { name: 'Upcoming', value: upcomingCount },
+        { name: 'Ended', value: endedCount },
+    ];
+
+    const barData = Object.entries(metrics.deptStats).map(([dept, stats]) => ({
+        dept,
+        Registrations: stats.regs,
+        Capacity: stats.cap,
+    }));
 
     const filteredEvents = events.filter(e => {
         if (statusFilter === 'upcoming') return getEventStatus(e) === 'upcoming';
@@ -82,48 +99,97 @@ const AdminDashboard = () => {
             <h1>Admin Dashboard</h1>
             {error && <p className="error-msg">{error}</p>}
 
-            {/* Stats cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                <div className="card">
-                    <h3>Platform Users</h3>
-                    <p><strong>Students:</strong> {userStats.studentCount}</p>
-                    <p><strong>Faculty:</strong> {userStats.facultyCount}</p>
-                    <p><strong>Admins:</strong> {userStats.adminCount}</p>
-                </div>
-                <div className="card">
-                    <h3>Events Overview</h3>
-                    <p><strong>Total:</strong> {metrics.totalEvents}</p>
-                    <p style={{ color: '#059669' }}><strong>🟢 Upcoming:</strong> {upcomingCount}</p>
-                    <p style={{ color: '#dc2626' }}><strong>🔴 Ended:</strong> {endedCount}</p>
-                </div>
-                <div className="card">
-                    <h3>Registration Health</h3>
-                    <p><strong>Seats Filled:</strong> {metrics.totalRegistrations} / {metrics.totalCapacity}</p>
-                    <div style={{ marginTop: '10px', height: '10px', background: '#e2e8f0', borderRadius: '5px' }}>
-                        <div style={{ width: `${occupancyRate}%`, height: '100%', background: '#0ea5e9', borderRadius: '5px', transition: 'width 0.5s' }} />
+            {/* Stat cards row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '8px' }}>
+                {/* Platform Users */}
+                <div className="card stat-card">
+                    <div className="stat-card-icon" style={{ background: '#ede9fe', color: '#7c3aed' }}>👥</div>
+                    <div className="stat-card-body">
+                        <p className="stat-card-label">Platform Users</p>
+                        <p className="stat-card-value">{userStats.studentCount + userStats.facultyCount + userStats.adminCount}</p>
+                        <p className="stat-card-sub">
+                            {userStats.studentCount} Students · {userStats.facultyCount} Faculty · {userStats.adminCount} Admin
+                        </p>
                     </div>
-                    <p style={{ marginTop: '5px' }}><strong>Occupancy:</strong> {occupancyRate}%</p>
                 </div>
-                <div className="card">
-                    <h3>Dept Performance</h3>
-                    <table style={{ fontSize: '0.85rem', marginTop: 0 }}>
-                        <thead><tr><th>Dept</th><th>Events</th><th>Regs</th><th>Util%</th></tr></thead>
-                        <tbody>
-                            {Object.entries(metrics.deptStats).map(([dept, stats]) => (
-                                <tr key={dept}>
-                                    <td>{dept}</td>
-                                    <td>{stats.events}</td>
-                                    <td>{stats.regs}</td>
-                                    <td>{((stats.regs / stats.cap) * 100 || 0).toFixed(0)}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+
+                {/* Total Events */}
+                <div className="card stat-card">
+                    <div className="stat-card-icon" style={{ background: '#dbeafe', color: '#2563eb' }}>📅</div>
+                    <div className="stat-card-body">
+                        <p className="stat-card-label">Total Events</p>
+                        <p className="stat-card-value">{metrics.totalEvents}</p>
+                        <p className="stat-card-sub">
+                            <span style={{ color: '#16a34a' }}>↑ {upcomingCount} upcoming</span>
+                            {' · '}
+                            <span style={{ color: '#dc2626' }}>✓ {endedCount} ended</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Occupancy */}
+                <div className="card stat-card">
+                    <div className="stat-card-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>📊</div>
+                    <div className="stat-card-body">
+                        <p className="stat-card-label">Seat Occupancy</p>
+                        <p className="stat-card-value">{occupancyRate}%</p>
+                        <div style={{ marginTop: '8px', height: '6px', background: '#e2e8f0', borderRadius: '3px' }}>
+                            <div style={{ width: `${occupancyRate}%`, height: '100%', background: '#0ea5e9', borderRadius: '3px', transition: 'width 0.6s' }} />
+                        </div>
+                        <p className="stat-card-sub" style={{ marginTop: '4px' }}>{metrics.totalRegistrations} / {metrics.totalCapacity} seats</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginTop: '16px' }}>
+                {/* Donut / Pie chart - Event Status */}
+                <div className="card" style={{ minHeight: '260px' }}>
+                    <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#475569' }}>Events Status</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={55}
+                                outerRadius={80}
+                                paddingAngle={4}
+                                dataKey="value"
+                            >
+                                {pieData.map((entry, i) => (
+                                    <Cell key={i} fill={PIE_COLORS[i]} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend iconType="circle" iconSize={10} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Bar chart - Department Registrations */}
+                <div className="card" style={{ minHeight: '260px' }}>
+                    <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#475569' }}>Department — Registrations vs Capacity</h3>
+                    {barData.length === 0 ? (
+                        <p style={{ color: '#94a3b8', textAlign: 'center', paddingTop: '60px' }}>No data yet</p>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={barData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="dept" tick={{ fontSize: 12 }} />
+                                <YAxis tick={{ fontSize: 12 }} />
+                                <Tooltip />
+                                <Legend iconType="circle" iconSize={10} />
+                                <Bar dataKey="Registrations" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Capacity" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
 
             {/* All Events table */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '28px' }}>
                 <h3 style={{ margin: 0 }}>All Events</h3>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     {[{ key: 'all', label: 'All' }, { key: 'upcoming', label: '🟢 Upcoming' }, { key: 'ended', label: '🔴 Ended' }].map(opt => (

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -26,19 +27,27 @@ const App = () => {
               <button onClick={handleLogout} style={{ marginLeft: '20px' }}>Logout</button>
             </>
           ) : (
-            <Link to="/">Login</Link>
+            <>
+              <Link to="/login">Login</Link>
+              <Link to="/register" style={{ marginLeft: '1rem' }}>Register</Link>
+            </>
           )}
         </nav>
       </header>
 
-      <div className="container">
-        <Routes>
-          <Route path="/" element={user ? <Navigate to={`/${user.role}-dashboard`} /> : <LoginPage setUser={setUser} />} />
-          <Route path="/student-dashboard" element={user?.role === 'student' ? <StudentDashboard /> : <Navigate to="/" />} />
-          <Route path="/faculty-dashboard" element={user?.role === 'faculty' ? <FacultyDashboard /> : <Navigate to="/" />} />
-          <Route path="/admin-dashboard" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
-        </Routes>
-      </div>
+      <Routes>
+        {/* Public home — shown only when not logged in */}
+        <Route path="/" element={user ? <Navigate to={`/${user.role}-dashboard`} /> : <HomePage />} />
+
+        {/* Auth pages */}
+        <Route path="/login" element={user ? <Navigate to={`/${user.role}-dashboard`} /> : <LoginPage setUser={setUser} startMode="login" />} />
+        <Route path="/register" element={user ? <Navigate to={`/${user.role}-dashboard`} /> : <LoginPage setUser={setUser} startMode="register" />} />
+
+        {/* Dashboards */}
+        <Route path="/student-dashboard" element={user?.role === 'student' ? <div className="container"><StudentDashboard /></div> : <Navigate to="/" />} />
+        <Route path="/faculty-dashboard" element={user?.role === 'faculty' ? <div className="container"><FacultyDashboard /></div> : <Navigate to="/" />} />
+        <Route path="/admin-dashboard" element={user?.role === 'admin' ? <div className="container"><AdminDashboard /></div> : <Navigate to="/" />} />
+      </Routes>
     </Router>
   );
 };
